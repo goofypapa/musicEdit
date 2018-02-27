@@ -1,0 +1,15 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>qtquickcontrols2.conf</file>
+        <file>SoundEdit.qml</file>
+        <file>Ruler.qml</file>
+        <file>EditCore.qml</file>
+        <file>MyComboBox.qml</file>
+        <file>Mark.qml</file>
+        <file>Tone.qml</file>
+        <file>PlayAudioModel.qml</file>
+        <file>ChoiceSoundSoure.qml</file>
+        <file>PowerParse.qml</file>
+    </qresource>
+</RCC>
