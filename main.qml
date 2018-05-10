@@ -17,6 +17,11 @@ ApplicationWindow {
         return m_currEditFile === "" ? qsTr("笨爸爸-乐谱编辑器") : ( m_currEditFile + ( isSave ? "" : "*" ) );
     }
 
+    property bool m_shiftDown: false;
+    property bool m_ctrlDown: false;
+
+    property var m_copyArea: [];
+
 
     property alias m_scale: soundEdit.m_scale;
     property alias m_unit: soundEdit.m_unit;
@@ -58,29 +63,49 @@ ApplicationWindow {
     function insert( p_type )
     {
         var t_selectIndex = m_selectIndex;
-        soundEdit.f_insert( {note: p_type, tone: "-", power: 1.0, special: 1.0 } );
+        soundEdit.f_insert( {note: p_type, tone: "-", power: 1.0, special: 1.0, hand: "left" } );
         if( m_selectIndex === t_selectIndex + 1 && soundEdit.m_width > frame.width ){
             hbar.position = ( soundEdit.m_width - frame.width ) / soundEdit.m_width;
         }
         isSave = false;
+        keyboard.focus = true;
+        soundEdit.m_selectArea = [];
+    }
+
+    function insert_area( p_list )
+    {
+        for( var i = 0; i < p_list.length; ++i ){
+            soundEdit.f_insert( p_list[i] );
+        }
+
+//        if( m_selectIndex === t_selectIndex + 1 && soundEdit.m_width > frame.width ){
+//            hbar.position = ( soundEdit.m_width - frame.width ) / soundEdit.m_width;
+//        }
+        isSave = false;
+        keyboard.focus = true;
     }
 
     function f_delete()
     {
         soundEdit.f_delete();
         isSave = false;
+        keyboard.focus = true;
+        soundEdit.m_selectArea = [];
     }
 
     function clear()
     {
         m_json.data = [];
+        soundEdit.m_selectArea = [];
         soundEdit.m_data = m_json.data;
         hbar.position = 0.0;
         isSave = false;
+        keyboard.focus = true;
     }
 
     onM_selectIndexChanged: {
         showSelectinfo();
+        keyboard.focus = true;
     }
 
     function showSelectinfo(){
@@ -144,9 +169,17 @@ ApplicationWindow {
         }else if( Math.abs( t_item.special - 2.0 / 3.0 ) < 0.001 ){
             fudian.checked = true;
         }
+
+        if( t_item.hand === "left" ){
+            zuoshou.checked = true;
+        }else if( t_item.hand === "right" ){
+            youshou.checked = true;
+        }
     }
 
     function changeTone( t_tone ){
+
+        keyboard.focus = true;
 
         if( m_selectIndex < 0 || m_selectIndex >= m_json.data.length ){
             return;
@@ -161,6 +194,7 @@ ApplicationWindow {
     }
 
     function changePower( p_power ){
+        keyboard.focus = true;
         if( m_selectIndex < 0 || m_selectIndex >= m_json.data.length ){
             return;
         }
@@ -170,12 +204,24 @@ ApplicationWindow {
     }
 
     function changeSpecial( p_special ){
+        keyboard.focus = true;
         if( m_selectIndex < 0 || m_selectIndex >= m_json.data.length ){
             return;
         }
         m_json.data[m_selectIndex].special = p_special;
 
         soundEdit.f_changeSpecial( m_selectIndex, p_special );
+        isSave = false;
+    }
+
+    function changeHand( p_hand ){
+        keyboard.focus = true;
+        if( m_selectIndex < 0 || m_selectIndex >= m_json.data.length ){
+            return;
+        }
+        m_json.data[m_selectIndex].hand = p_hand;
+
+        soundEdit.f_changeHand( m_selectIndex, p_hand );
         isSave = false;
     }
 
@@ -300,6 +346,20 @@ ApplicationWindow {
             soundEdit.m_data = m_json.data;
             qumu.text = m_json.name;
         }
+    }
+
+    function clone( p_obj ){
+        var result = {};
+
+        for( var item in p_obj ){
+            if( typeof( p_obj[item] ) === "object" ){
+
+            }else{
+                result[item] = p_obj[item];
+            }
+        }
+
+        return result;
     }
 
     Timer{
@@ -665,8 +725,6 @@ ApplicationWindow {
                             onValueChanged:{
                                 m_scale = value * 4.0 + 1.0;
                             }
-
-
 
                             background: Rectangle {
                                 x: slider_control.leftPadding
@@ -1176,6 +1234,51 @@ ApplicationWindow {
                             }
                         }
 
+                        Row{
+                            height: 50;
+                            width: parent.width;
+
+                            ButtonGroup{
+                                id: suoyoushou;
+                            }
+
+                            Item{
+                                height: parent.height;
+                                width: 80;
+                                Text {
+                                    text: qsTr("左右手:");
+                                    font.pixelSize: 12;
+                                    anchors.centerIn: parent;
+                                }
+                            }
+
+                            Item{
+                                height: parent.height;
+                                width: 10;
+                            }
+
+                            RadioButton{
+                                id: zuoshou;
+                                text: qsTr("左手");
+                                font.pixelSize: 16;
+                                ButtonGroup.group: suoyoushou;
+                                checked: true;
+                                onClicked: changeHand( "left" );
+                            }
+
+                            Item{
+                                height: parent.height;
+                                width: 10;
+                            }
+
+                            RadioButton{
+                                id: youshou;
+                                text: qsTr("右手");
+                                font.pixelSize: 16;
+                                ButtonGroup.group: suoyoushou;
+                                onClicked: changeHand( "right" );
+                            }
+                        }
                     }
                 }
 
@@ -1355,4 +1458,39 @@ ApplicationWindow {
     //        }
     //    }
 
+
+
+    Item{
+        id: keyboard;
+        anchors.fill: parent
+        focus: true;
+
+        Keys.onPressed: {
+            event.accepted = true;
+            if(event.key === Qt.Key_Shift){
+                m_shiftDown = true;
+            }else if(event.key === Qt.Key_Control){
+                m_ctrlDown = true;
+            }else if( event.key === Qt.Key_C ){
+                if(m_ctrlDown){
+                    m_copyArea = [];
+                    for( var i = 0; i < soundEdit.m_selectArea.length; ++i ){
+                        m_copyArea.push( clone( soundEdit.f_read( soundEdit.m_selectArea[i] ) ) );
+                    }
+                }
+            }else if( event.key === Qt.Key_V ){
+                if(m_ctrlDown){
+                    insert_area(m_copyArea);
+                }
+            }
+        }
+
+        Keys.onReleased: {
+            if(event.key === Qt.Key_Shift){
+                m_shiftDown = false;
+            }else if(event.key === Qt.Key_Control){
+                m_ctrlDown = false;
+            }
+        }
+    }
 }

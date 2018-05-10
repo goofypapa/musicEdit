@@ -13,6 +13,8 @@ Column {
     property real m_index: 0.0;
     property int m_beat: 4;
 
+    property var m_selectArea: [];
+
     property real m_width: 0.0;
 
     height: 60;
@@ -114,32 +116,56 @@ Column {
         m_width = m_currBeat * m_unit * m_scale * 8;
     }
 
-    property var f_delete: function( ){
-
-        var t_index = m_selectIndex;
-        if( t_index >= tones.length || t_index < 0 )
-        {
+    property var f_changeHand: function( p_index, p_hand ){
+        if( p_index < 0 || p_index >= tones.length ){
             return;
         }
 
-        var t_beat = 1 / tones[t_index].note / tones[t_index].special;
-        tones[t_index].destroy();
-        for( var i = t_index; i < tones.length - 1; ++i )
+        tones[p_index].hand = p_hand;
+    }
+
+    property var f_delete: function( ){
+
+        if(m_selectArea.length == 0 ){
+            m_selectArea.push(m_selectIndex);
+        }
+
+        var t_beat = 0;
+        var min = m_selectArea[0];
+        var max = m_selectArea[0];
+
+        for( var i = 0; i < m_selectArea.length; ++i )
         {
-            tones[i] = tones[i + 1];
+            var t_index = m_selectArea[i];
+
+            if( t_index >= tones.length || t_index < 0 )
+            {
+                continue;
+            }
+
+            if(min > t_index) min = t_index;
+            if(max < t_index) max = t_index;
+
+            t_beat += 1 / tones[t_index].note / tones[t_index].special;
+            tones[t_index].destroy();
+        }
+
+        for(i = min; i < tones.length - max + min - 1; ++i )
+        {
+            tones[i] = tones[i + max - min + 1];
             tones[i].m_currBeat -= t_beat;
             tones[i].m_index = i;
-            m_data[i] = m_data[i + 1];
+            m_data[i] = m_data[i + max - min + 1 ];
         }
-        tones.length = tones.length - 1;
-        m_data.length = m_data.length - 1;
+        tones.length = tones.length - max + min - 1;
+        m_data.length = m_data.length - max + min - 1;
         m_currBeat -= t_beat;
         m_width = m_currBeat * m_unit * m_scale * 8;
 
-        if( m_selectIndex > 0 )
-        {
-            --m_selectIndex;
-        }else if( m_selectIndex >= tones.length )
+        m_selectIndex = min;
+        m_selectArea = [];
+
+        if( m_selectIndex >= tones.length )
         {
             m_selectIndex = tones.length - 1;
         }
@@ -160,6 +186,16 @@ Column {
     property var f_reload: function( p_index )
     {
         tones[p_index].tone = m_data[p_index].tone;
+    }
+
+    property var f_read: function( p_index )
+    {
+        var columns = ["hand", "lamp", "note", "power", "special", "tone" ];
+        var result = {};
+        for(var i = 0; i < columns.length; ++i){
+            result[columns[i]] = m_data[p_index][columns[i]];
+        }
+        return result;
     }
 
     function createItem()
@@ -195,6 +231,7 @@ Column {
         tones[p_index].note = m_data[p_index].note;
         tones[p_index].tone = m_data[p_index].tone;
         tones[p_index].special = m_data[p_index].special;
+        tones[p_index].hand = m_data[p_index].hand;
         tones[p_index].m_scale = m_scale;
         tones[p_index].m_unit = m_unit;
         tones[p_index].m_beat = m_beat;
