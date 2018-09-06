@@ -4,6 +4,8 @@
 #include <QFile>
 #include <QCoreApplication>
 #include <vector>
+#include <math.h>
+#include <QDateTime>
 
 #include "json.h"
 
@@ -70,7 +72,7 @@ bool musicEdit::saveFile( const QString p_data )
 
     std::string t_str = t_json->to_string();
 
-    file.write( t_str.c_str(), t_str.size() );
+    file.write( t_str.c_str(), static_cast<qint64>( t_str.size() ) );
 
     file.close();
 
@@ -103,9 +105,9 @@ QString musicEdit::parsePower( const QString p_music, const QString p_data, int 
     char buf[1024] = {0};
     bool t_fileStart = false;
     float t_emptyData = 0.0f;
-    float t_errorTime = (float)p_errorTime / 1000.0f;
-    float t_minPower = (float)p_minPower / 100.0f;
-    float t_maxPower = (float)p_maxPower / 100.0f;
+    float t_errorTime = static_cast<float>(p_errorTime) / 1000.0f;
+    float t_minPower = static_cast<float>(p_minPower) / 100.0f;
+    float t_maxPower = static_cast<float>(p_maxPower) / 100.0f;
 
     float t_startTimeOffset = 0.0f;
 
@@ -128,7 +130,7 @@ QString musicEdit::parsePower( const QString p_music, const QString p_data, int 
             {
                 t_emptyData = t_power;
             }
-            t_sourceData.push_back( std::pair<float, float>(t_time, t_power == t_emptyData ? 0.0f : t_power ) );
+            t_sourceData.push_back( std::pair<float, float>(t_time, (t_power == t_emptyData) ? 0.0f : t_power ) );
         }
         if( !t_fileStart && t_list[0] == "TIME" ) t_fileStart = true;
     }
@@ -171,7 +173,7 @@ QString musicEdit::parsePower( const QString p_music, const QString p_data, int 
     for( size_t i = 0; i < t_sourceData.size(); ++i )
     {
         float t_power = t_sourceData[i].second;
-        if( t_power < 0.6 ) continue;
+        if( t_power < 0.6f ) continue;
         bool t_flag = true;
         for( size_t t = 0; t <= 5; ++t )
         {
@@ -262,7 +264,7 @@ QString musicEdit::parsePower( const QString p_music, const QString p_data_1, co
     char buf[1024] = {0};
 
     float t_emptyData[3] = { 0.0f };
-    int t_vectorSize[3] = { 0 };
+    size_t t_vectorSize[3] = { 0 };
     bool t_fileStart = false;
     for( size_t i = 0; i < sizeof( t_files ) / sizeof(QFile *); ++i ){
         t_fileStart = false;
@@ -425,4 +427,31 @@ QString musicEdit::getPwd(void)
     }
 
     return t_pwd;
+}
+
+
+void musicEdit::play( const QString p_path, const int p_volume )
+{
+    QMediaPlayer * t_mediaPlayer = new QMediaPlayer();
+    t_mediaPlayer->setMedia( QUrl::fromLocalFile( p_path ));
+    t_mediaPlayer->setVolume( p_volume );
+    connect( t_mediaPlayer, SIGNAL( stateChanged( QMediaPlayer::State ) ), this, SLOT( stateChanged( QMediaPlayer::State ) ) );
+    t_mediaPlayer->play();
+}
+
+void musicEdit::stateChanged( QMediaPlayer::State p_state )
+{
+    QMediaPlayer * t_mediaPlayer = qobject_cast< QMediaPlayer * >( sender() );
+
+    switch( p_state )
+    {
+    case QMediaPlayer::PlayingState:
+//        qDebug() << "Playering: " << QDateTime::currentDateTime().toTime_t();
+        break;
+    case QMediaPlayer::StoppedState:
+        delete t_mediaPlayer;
+        break;
+    default:
+        break;
+    }
 }

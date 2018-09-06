@@ -11,5 +11,13 @@
         <file>PlayAudioModel.qml</file>
         <file>ChoiceSoundSoure.qml</file>
         <file>PowerParse.qml</file>
+        <file>soundSource/Djembe/Bass.wav</file>
+        <file>soundSource/Djembe/Slap.wav</file>
+        <file>soundSource/Djembe/Tone.wav</file>
+        <file>json.cpp</file>
+        <file>json.h</file>
+        <file>main.cpp</file>
+        <file>musicedit.cpp</file>
+        <file>musicedit.h</file>
     </qresource>
 </RCC>

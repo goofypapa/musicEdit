@@ -52,7 +52,8 @@ Item {
                 return;
             }
 
-            pm_soundSource[m_selectName] = file.toString().replace("file:///", "");
+            pm_soundSource[m_selectName] = file.toString().replace("file://", "");
+
             loadSoundSource();
         }
     }

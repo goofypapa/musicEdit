@@ -28,7 +28,8 @@ Item {
 
     Audio{
         id: audio;
-        source: m_source + m_powerLavel + ".wav";
+//        source: m_source + m_powerLavel + ".wav";
+        source: m_source + ".wav";
         volume: m_volume;
         onStatusChanged: {
             if( status === 7 )

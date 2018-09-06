@@ -38,8 +38,6 @@ ApplicationWindow {
     property bool isSave: true;
     property string m_currEditFile: "";
 
-    property string m_appactionPath: musicedit.getPwd();
-
     property var m_json: {
 
     }
@@ -54,9 +52,10 @@ ApplicationWindow {
         m_json = { name: "", speed: 60, data: [] }
 
         m_soundSource = {};
-        m_soundSource["B"] = m_appactionPath + "/soundSource/Djembe/Bass_";
-        m_soundSource["T"] = m_appactionPath + "/soundSource/Djembe/Tone_";
-        m_soundSource["S"] = m_appactionPath + "/soundSource/Djembe/Slap_";
+
+        m_soundSource["B"] = musicedit.getPwd() + "/soundSource/Djembe/Bass.wav";
+        m_soundSource["T"] = musicedit.getPwd() + "/soundSource/Djembe/Tone.wav";
+        m_soundSource["S"] = musicedit.getPwd() + "/soundSource/Djembe/Slap.wav";
 
     }
 
@@ -78,9 +77,6 @@ ApplicationWindow {
             soundEdit.f_insert( p_list[i] );
         }
 
-//        if( m_selectIndex === t_selectIndex + 1 && soundEdit.m_width > frame.width ){
-//            hbar.position = ( soundEdit.m_width - frame.width ) / soundEdit.m_width;
-//        }
         isSave = false;
         keyboard.focus = true;
     }
@@ -280,17 +276,20 @@ ApplicationWindow {
             return;
         }
 
-        if( playAudioModelCompont.status !== Component.Ready ){
-            console.log( "playAudioModelCompont is not ready" );
-            return;
-        }
-        var t_model = playAudioModelCompont.createObject(widnow);
+//        if( playAudioModelCompont.status !== Component.Ready ){
+//            console.log( "playAudioModelCompont is not ready" );
+//            return;
+//        }
+//        var t_model = playAudioModelCompont.createObject(widnow);
 
-        t_model.m_source = p_playFile;
-        t_model.m_powerLavel = Math.ceil( p_power / ( 1.0 / t_model.m_audioCount ) );
-        t_model.m_volume = m_volume;
-        t_model.m_power = p_power;
-        t_model.m_playing = true;
+//        t_model.m_source = p_playFile;
+//        t_model.m_powerLavel = Math.ceil( p_power / ( 1.0 / t_model.m_audioCount ) );
+//        t_model.m_volume = m_volume;
+//        t_model.m_power = p_power;
+//        t_model.m_playing = true;
+
+        console.log( p_playFile );
+        musicedit.play( p_playFile,  Math.floor( m_volume * 100 ) );
     }
 
     function _loadJson( p_json ){
@@ -364,12 +363,13 @@ ApplicationWindow {
 
     Timer{
         running: m_playing;
-        interval: 50;
+        interval: 10;
         repeat: true;
         property int m_runningTime: 0.0;
         property real m_noteTime: 0.0;
+        property bool m_ready: false;
         onRunningChanged: {
-
+            m_ready = false;
             if( !running ) return;
 
             if( m_playCursorX >= soundEdit.m_width ){
@@ -392,7 +392,6 @@ ApplicationWindow {
                     break;
                 }
                 t_width = ttt_width;
-                t_currTime += m_noteTime / m_json.data[m_playIndex].note / m_json.data[m_playIndex].special;
             }
 
             if( m_playIndex === 0 ){
@@ -406,10 +405,12 @@ ApplicationWindow {
             if( m_playIndex >= 0 ){
                 m_nextTime = t_currTime +  m_noteTime / m_json.data[m_playIndex].note / m_json.data[m_playIndex].special;
             }
+
+            m_ready = true;
         }
 
         onTriggered: {
-
+            if( !m_ready ) return;
             m_playingTime += interval;
             if( m_playingTime >= m_nextTime ){
                 if( ++m_playIndex >= m_json.data.length ){
@@ -1180,7 +1181,7 @@ ApplicationWindow {
 
                             RadioButton{
                                 id: fudian;
-                                text: qsTr("复点");
+                                text: qsTr("附点");
                                 font.pixelSize: 16;
                                 ButtonGroup.group: special;
                                 onClicked: changeSpecial( 2.0 / 3.0 );
@@ -1442,22 +1443,6 @@ ApplicationWindow {
     PowerParse{
         id: powerParse;
     }
-
-    //    footer: TabBar {
-    //        id: tabBar
-    //        currentIndex: swipeView.currentIndex
-    //        TabButton {
-    //            text: qsTr("编曲");
-    //            font.bold: true;
-    //            font.pixelSize: 20;
-    //        }
-    //        TabButton {
-    //            text: qsTr("复合力度");
-    //            font.bold: true;
-    //            font.pixelSize: 20;
-    //        }
-    //    }
-
 
 
     Item{
