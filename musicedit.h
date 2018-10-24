@@ -25,12 +25,16 @@ public slots:
 
     void play( const QString p_path, const int p_volume );
 
+    void playBackgroundMusic( const QString p_path, const int p_time, const int p_volume );
+    void pauseBackgroundMusic( void );
+
 
     void stateChanged( QMediaPlayer::State p_state );
 
 
 private:
     QString m_filePath;
+    QMediaPlayer * m_mediaPlayer;
 };
 
 #endif // MUSICEDIT_H

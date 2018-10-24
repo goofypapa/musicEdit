@@ -12,6 +12,7 @@
 musicEdit::musicEdit( QObject * parent ) : QObject( parent )
 {
     m_filePath = "";
+    m_mediaPlayer = nullptr;
 }
 
 musicEdit::~musicEdit()
@@ -34,18 +35,20 @@ QString musicEdit::readFile( const QString p_str )
 
     m_filePath = t_str;
 
-    ws_core::node * t_json = ws_core::parse( file.readAll().toStdString().c_str() );
+//    ws_core::node * t_json = ws_core::parse( file.readAll().toStdString().c_str() );
 
-    if( !t_json )
-    {
-        return "";
-    }
+//    if( !t_json )
+//    {
+//        return "";
+//    }
+
+//    result = t_json->to_string().c_str();
+
+//    ws_core::free_json_node( &t_json );
+
+    result = file.readAll();
 
     file.close();
-
-    result = t_json->to_string().c_str();
-
-    ws_core::free_json_node( &t_json );
 
     return result;
 }
@@ -437,6 +440,29 @@ void musicEdit::play( const QString p_path, const int p_volume )
     t_mediaPlayer->setVolume( p_volume );
     connect( t_mediaPlayer, SIGNAL( stateChanged( QMediaPlayer::State ) ), this, SLOT( stateChanged( QMediaPlayer::State ) ) );
     t_mediaPlayer->play();
+}
+
+void musicEdit::playBackgroundMusic( const QString p_path, const int p_time, const int p_volume )
+{
+    if( m_mediaPlayer )
+    {
+        delete m_mediaPlayer;
+        m_mediaPlayer = nullptr;
+    }
+
+    m_mediaPlayer = new QMediaPlayer();
+    m_mediaPlayer->setMedia( QUrl::fromLocalFile( p_path ));
+    m_mediaPlayer->setVolume( p_volume );
+    m_mediaPlayer->setPosition( p_time );
+    m_mediaPlayer->play();
+}
+
+void musicEdit::pauseBackgroundMusic( void )
+{
+    if( m_mediaPlayer )
+    {
+        m_mediaPlayer->stop();
+    }
 }
 
 void musicEdit::stateChanged( QMediaPlayer::State p_state )

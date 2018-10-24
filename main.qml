@@ -23,6 +23,9 @@ ApplicationWindow {
     property var m_copyArea: [];
 
 
+    property var m_instrumentList: [ "非洲鼓", "钢琴" ];
+
+
     property alias m_scale: soundEdit.m_scale;
     property alias m_unit: soundEdit.m_unit;
     property alias m_beat: soundEdit.m_beat;
@@ -37,6 +40,19 @@ ApplicationWindow {
     property int m_playingTime: 0;
     property bool isSave: true;
     property string m_currEditFile: "";
+    property string m_backgroundMusic: "";
+
+
+    property int m_pitch: 0;
+    property var m_pianoToneList: ["C", "D", "E", "F", "G", "A", "B"];
+
+    onM_backgroundMusicChanged: {
+        console.log( m_backgroundMusic, m_playingTime, m_volume )
+        if( m_playing && m_backgroundMusic.length > 0 )
+        {
+            musicedit.playBackgroundMusic( m_backgroundMusic, m_playingTime, Math.floor( m_volume * 100 ) );
+        }
+    }
 
     property var m_json: {
 
@@ -49,7 +65,7 @@ ApplicationWindow {
     property var playAudioModelCompont: Qt.createComponent("PlayAudioModel.qml");
 
     Component.onCompleted: {
-        m_json = { name: "", speed: 60, data: [] }
+        m_json = { name: "", speed: 60, data: [], instrument: m_instrumentList[0] }
 
         m_soundSource = {};
 
@@ -57,13 +73,54 @@ ApplicationWindow {
         m_soundSource["T"] = musicedit.getPwd() + "/soundSource/Djembe/Tone.wav";
         m_soundSource["S"] = musicedit.getPwd() + "/soundSource/Djembe/Slap.wav";
 
+
+        m_soundSource["C"] = musicedit.getPwd() + "/soundSource/Piano/C.wav";
+        m_soundSource["C+1"] = musicedit.getPwd() + "/soundSource/Piano/C+1.wav";
+        m_soundSource["C+2"] = musicedit.getPwd() + "/soundSource/Piano/C+2.wav";
+        m_soundSource["#C"] = musicedit.getPwd() + "/soundSource/Piano/#C.wav";
+
+    }
+
+    function getToneIndex()
+    {
+        var t_tone = pianoTone.text;
+        if( t_tone === "-" )
+        {
+            return m_pitch * m_pianoToneList.length;
+        }
+
+        var t_toneSplit = t_tone.split( "+" );
+        var t_pitch = 0;
+        if( t_toneSplit.length <= 1 )
+        {
+            t_toneSplit = t_tone.split( "-" );
+            if( t_toneSplit.length === 2 ){
+                t_pitch = -( Number( t_toneSplit[1] ) );
+            }
+        }else{
+            t_pitch = ( Number( t_toneSplit[1] ) );
+        }
+
+        t_tone = t_toneSplit[0];
+
+        return t_pitch * m_pianoToneList.length + m_pianoToneList.indexOf( t_tone[t_tone.length - 1] );
     }
 
     function insert( p_type )
     {
         var t_selectIndex = m_selectIndex;
-        soundEdit.f_insert( {note: p_type, tone: "-", power: 1.0, special: 1.0, hand: "left" } );
-        if( m_selectIndex === t_selectIndex + 1 && soundEdit.m_width > frame.width ){
+
+        var t_note = null;
+
+        if( m_json.instrument === "钢琴" )
+        {
+            t_note = {note: p_type, tone: "C" + ( m_pitch !== 0 ? "+" + m_pitch : "" ) , power: 1.0, special: 1.0, hand: "left" };
+        }else{
+            t_note = {note: p_type, tone: "-", power: 1.0, special: 1.0, hand: "left" };
+        }
+
+        soundEdit.f_insert( t_note );
+        if( m_selectIndex === m_json.data.length - 1 && soundEdit.m_width > frame.width ){
             hbar.position = ( soundEdit.m_width - frame.width ) / soundEdit.m_width;
         }
         isSave = false;
@@ -127,6 +184,9 @@ ApplicationWindow {
 
         switch( t_item.note )
         {
+        case 0.5:
+            note.text = "二分音符";
+            break;
         case 1:
             note.text = "四分音符";
             break;
@@ -141,16 +201,25 @@ ApplicationWindow {
             break;
         }
 
-        if( t_item.tone === "B" )
+        if( m_json.instrument === "非洲鼓" )
         {
-            djembe_b.checked = true;
-        }else if( t_item.tone === "T" ){
-            djembe_t.checked = true;
-        }else if( t_item.tone === "S" ){
-            djembe_s.checked = true;
-        }else{
-            djembe_e.checked = true;
+            if( t_item.tone === "B" )
+            {
+                djembe_b.checked = true;
+            }else if( t_item.tone === "T" ){
+                djembe_t.checked = true;
+            }else if( t_item.tone === "S" ){
+                djembe_s.checked = true;
+            }else{
+                djembe_e.checked = true;
+            }
         }
+
+        if( m_json.instrument === "钢琴" )
+        {
+            pianoTone.text = typeof( t_item.tone ) === "string" ? t_item.tone : JSON.stringify(t_item.tone);
+        }
+
 
         if( t_item.power >= 0 && t_item.power <= 1.0 ){
             power.value = t_item.power;
@@ -186,6 +255,11 @@ ApplicationWindow {
 
             soundEdit.f_reload( m_selectIndex );
             isSave = false;
+        }
+
+        if( m_json.instrument === "钢琴" )
+        {
+            pianoTone.text = t_tone;
         }
     }
 
@@ -224,6 +298,7 @@ ApplicationWindow {
     function openFile( p_filePath ){
 
         var t_fileStr = musicedit.readFile( p_filePath );
+
 
         var t_obj = JSON.parse( t_fileStr )
 
@@ -288,7 +363,6 @@ ApplicationWindow {
 //        t_model.m_power = p_power;
 //        t_model.m_playing = true;
 
-        console.log( p_playFile );
         musicedit.play( p_playFile,  Math.floor( m_volume * 100 ) );
     }
 
@@ -321,6 +395,19 @@ ApplicationWindow {
                 t_obj.beat = "4/4";
             }
 
+            if( typeof(t_obj.instrument) === "undefined" ){
+                t_obj.instrument = "非洲鼓";
+            }
+
+            switch(t_obj.instrument){
+            case "PIANO":
+                t_obj.instrument = "钢琴";
+                break;
+            default:
+                t_obj.instrument = "非洲鼓";
+                break;
+            }
+
             switch( t_obj.beat )
             {
             case "4/4":
@@ -337,6 +424,8 @@ ApplicationWindow {
                 m_beat = 4;
                 break;
             }
+
+            instrumentSelect.currentIndex = m_instrumentList.indexOf( t_obj.instrument );
 
             control.currentIndex = control.model.indexOf( t_obj.beat );
 
@@ -365,12 +454,17 @@ ApplicationWindow {
         running: m_playing;
         interval: 10;
         repeat: true;
-        property int m_runningTime: 0.0;
+        property real m_runningTime: 0.0;
         property real m_noteTime: 0.0;
-        property bool m_ready: false;
+        property real m_startTime: 0;
         onRunningChanged: {
-            m_ready = false;
-            if( !running ) return;
+            if( !running )
+            {
+                musicedit.pauseBackgroundMusic();
+                return;
+            }
+
+            m_startTime = (new Date()).getTime();
 
             if( m_playCursorX >= soundEdit.m_width ){
                 m_playCursorX = 0.0;
@@ -380,38 +474,30 @@ ApplicationWindow {
             m_runningTime = 0.0;
 
             var t_width = 0.0;
-            var t_currTime = 0.0;
             m_nextTime = 0.0;
             m_noteTime = 60000 / m_json.speed;
-            m_playingTime = m_playCursorX / m_unit / m_scale / 8 * m_noteTime;
+            m_startTime -= m_playCursorX / m_unit / m_scale / 8 * m_noteTime;
 
-            for( m_playIndex = 0; m_playIndex < m_json.data.length && t_width < m_playCursorX; ++m_playIndex ){
+            if( m_backgroundMusic != "" )
+            {
+                musicedit.playBackgroundMusic( m_backgroundMusic, (new Date()).getTime() - m_startTime, Math.floor( m_volume * 100 ) );
+            }
 
-                var ttt_width = t_width + m_unit * m_scale / m_json.data[m_playIndex].note * 8 / m_json.data[m_playIndex].special;
+            for( m_playIndex = -1; m_playIndex < m_json.data.length && t_width < m_playCursorX; ++m_playIndex ){
+
+                var ttt_width = t_width + m_unit * m_scale / m_json.data[m_playIndex + 1].note * 8 / m_json.data[m_playIndex + 1].special;
                 if( ttt_width >= m_playCursorX){
                     break;
                 }
+                m_nextTime += m_noteTime / m_json.data[m_playIndex + 1].note / m_json.data[m_playIndex + 1].special;
                 t_width = ttt_width;
             }
 
-            if( m_playIndex === 0 ){
-                m_playIndex = -1;
-            }
-
-            if( m_playIndex >= m_json.data.length ){
-                return;
-            }
-
-            if( m_playIndex >= 0 ){
-                m_nextTime = t_currTime +  m_noteTime / m_json.data[m_playIndex].note / m_json.data[m_playIndex].special;
-            }
-
-            m_ready = true;
         }
 
         onTriggered: {
-            if( !m_ready ) return;
-            m_playingTime += interval;
+            m_playingTime = (new Date()).getTime() - m_startTime;
+
             if( m_playingTime >= m_nextTime ){
                 if( ++m_playIndex >= m_json.data.length ){
                     m_playing = false;
@@ -419,7 +505,21 @@ ApplicationWindow {
                     return;
                 }
 
-                play( m_soundSource[ m_json.data[m_playIndex].tone ], m_json.data[m_playIndex].power );
+                var dir = ""
+                if( m_json.instrument === "钢琴" ){
+                    dir = "Piano";
+                }else{
+                    dir = "Djembe";
+                }
+
+                if( typeof( m_json.data[m_playIndex].tone) !== "string" && m_json.data[m_playIndex].tone.length ){
+                    for( var i = 0; i < m_json.data[m_playIndex].tone.length; ++i ){
+                        play( musicedit.getPwd() + "/soundSource/" + dir + "/" + m_json.data[m_playIndex].tone[i] +  ".wav", m_json.data[m_playIndex].power);
+                    }
+                }else{
+                    play( musicedit.getPwd() + "/soundSource/" + dir + "/" + m_json.data[m_playIndex].tone +  ".wav", m_json.data[m_playIndex].power);
+                }
+
                 m_nextTime += m_noteTime / m_json.data[m_playIndex].note / m_json.data[m_playIndex].special;
             }
 
@@ -449,6 +549,15 @@ ApplicationWindow {
         fileMode: FileDialog.SaveFile;
         onAccepted: {
             saveFileAs(file);
+        }
+    }
+
+    FileDialog{
+        id: selectAccompaniment;
+        folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation);
+        nameFilters: ["Audio files (*.wav)"];
+        onAccepted:{
+            m_backgroundMusic = file.toString().replace("file://", "");
         }
     }
 
@@ -617,6 +726,58 @@ ApplicationWindow {
 
                             Component.onCompleted: {
                                 f_valueChange();
+                            }
+                        }
+                    }
+
+                    Item{
+                        height: parent.height;
+                        width: 20;
+                    }
+
+                    Item{
+                        height: parent.height;
+                        width: 60;
+                        Text {
+                            text: qsTr("伴奏：");
+                            anchors.horizontalCenter: parent.horizontalCenter;
+                            anchors.bottom: parent.bottom;
+                            anchors.bottomMargin: 5;
+                            font.pixelSize: 20;
+                        }
+                    }
+
+                    Item{
+                        height: parent.height;
+                        width: 20;
+                    }
+
+                    Item{
+                        height: parent.height;
+                        width: 160;
+                        clip: true;
+                        Text {
+                            text: qsTr( m_backgroundMusic != "" ? m_backgroundMusic : "--" );
+                            anchors.verticalCenter: parent.verticalCenter;
+                            x: width > parent.width ?  parent.width - width : 0;
+                        }
+                    }
+
+                    Item{
+                        height: parent.height;
+                        width: 20;
+                    }
+
+                    Item{
+                        height: parent.height;
+                        width: 50;
+                        Button{
+                            height: 30;
+                            width: 50;
+                            anchors.centerIn: parent;
+                            text: qsTr("更改");
+                            onClicked: {
+                                selectAccompaniment.open();
                             }
                         }
                     }
@@ -810,12 +971,63 @@ ApplicationWindow {
                     }
                 }
 
+                Row{
+                    height: 50;
+                    width: parent.width;
+
+                    visible: instrumentSelect.currentText === "钢琴";
+
+                    Item{
+                        height: parent.height;
+                        width: 80;
+                        Text {
+                            text: qsTr("八度:");
+                            font.pixelSize: 12;
+                            anchors.centerIn: parent;
+                        }
+                    }
+
+                    MyComboBox{
+                        model: [ "C0", "C1", "C2" ];
+                        width: 100;
+                        height: 30;
+                        font.pixelSize: 12;
+                        anchors.verticalCenter: parent.verticalCenter;
+
+                        currentIndex: 0;
+                        onCurrentIndexChanged: {
+                            m_pitch = currentIndex;
+                            keyboard.focus = true;
+                        }
+                    }
+
+                }
+
                 Item{
                     height: 50;
                     width: parent.width;
 
                     Row{
                         anchors.fill: parent;
+                        Item{
+                            height: parent.height;
+                            width: 20;
+                        }
+
+                        Item{
+                            height: parent.height;
+                            width: 100;
+
+                            Button{
+                                text: qsTr("二分音");
+                                font.pixelSize: 12;
+                                width: 80;
+                                height: 30;
+                                anchors.centerIn: parent;
+                                onClicked: insert(0.5);
+                            }
+                        }
+
                         Item{
                             height: parent.height;
                             width: 20;
@@ -853,6 +1065,15 @@ ApplicationWindow {
                                 onClicked: insert(2);
                             }
                         }
+                    }
+                }
+
+                Item{
+                    height: 50;
+                    width: parent.width;
+
+                    Row{
+                        anchors.fill: parent;
 
                         Item{
                             height: parent.height;
@@ -872,15 +1093,7 @@ ApplicationWindow {
                                 onClicked: insert(4);
                             }
                         }
-                    }
-                }
 
-                Item{
-                    height: 50;
-                    width: parent.width;
-
-                    Row{
-                        anchors.fill: parent;
                         Item{
                             height: parent.height;
                             width: 20;
@@ -986,11 +1199,19 @@ ApplicationWindow {
                         }
 
                         MyComboBox{
-                            model: ["非洲鼓"];
+                            id: instrumentSelect;
+                            model: m_instrumentList;
                             width: 100;
                             height: 30;
                             font.pixelSize: 12;
                             anchors.verticalCenter: parent.verticalCenter;
+
+                            currentIndex: 0;
+                            onCurrentIndexChanged: {
+                                m_json.instrument = m_instrumentList[currentIndex];
+                                isSave = false;
+                                keyboard.focus = true;
+                            }
                         }
 
                         Item{
@@ -1073,6 +1294,8 @@ ApplicationWindow {
                             height: 50;
                             width: parent.width;
 
+                            visible: instrumentSelect.currentText === "非洲鼓";
+
                             ButtonGroup{
                                 id: bts;
                             }
@@ -1133,6 +1356,45 @@ ApplicationWindow {
                                 onClicked: changeTone(text);
                             }
                         }
+
+                        Row{
+                            height: 50;
+                            width: parent.width;
+
+                            visible: instrumentSelect.currentText === "钢琴";
+
+
+                            Item{
+                                height: parent.height;
+                                width: 80;
+                                Text {
+                                    text: qsTr("音符:");
+                                    font.pixelSize: 12;
+                                    anchors.centerIn: parent;
+                                }
+                            }
+
+
+                            Item{
+                                height: parent.height;
+                                width: 20;
+                            }
+
+                            Item{
+                                height: parent.height;
+                                width: 100;
+                                Text{
+                                    id: pianoTone;
+                                    anchors.verticalCenter: parent.verticalCenter;
+                                    text: qsTr("-");
+                                    font.pixelSize: 12;
+                                }
+                            }
+
+                        }
+
+
+
 
 
                         Row{
@@ -1430,6 +1692,9 @@ ApplicationWindow {
                 to: 1.0;
                 value: 0.8;
                 anchors.verticalCenter: parent.verticalCenter;
+                onValueChanged: {
+                    keyboard.focus = true;
+                }
             }
         }
     }
@@ -1452,20 +1717,187 @@ ApplicationWindow {
 
         Keys.onPressed: {
             event.accepted = true;
-            if(event.key === Qt.Key_Shift){
+            console.log( event.key );
+            switch( event.key )
+            {
+            case Qt.Key_Shift:
                 m_shiftDown = true;
-            }else if(event.key === Qt.Key_Control){
-                m_ctrlDown = true;
-            }else if( event.key === Qt.Key_C ){
+                break;
+            case Qt.Key_Control:
+                 m_ctrlDown = true;
+                 break;
+            case Qt.Key_C:
                 if(m_ctrlDown){
                     m_copyArea = [];
                     for( var i = 0; i < soundEdit.m_selectArea.length; ++i ){
                         m_copyArea.push( clone( soundEdit.f_read( soundEdit.m_selectArea[i] ) ) );
                     }
                 }
-            }else if( event.key === Qt.Key_V ){
+                break;
+            case Qt.Key_V:
                 if(m_ctrlDown){
                     insert_area(m_copyArea);
+                }
+                break;
+
+            case Qt.Key_1:
+                   insert( 0.5 );
+                   break;
+            case Qt.Key_2:
+                   insert( 1 );
+                   break;
+            case Qt.Key_3:
+                   insert( 2 );
+                   break;
+            case Qt.Key_4:
+                   insert( 4 );
+                   break;
+            case Qt.Key_5:
+                   insert( 8 );
+                   break;
+            case Qt.Key_6:
+                   insert( 16 );
+                   break;
+            case Qt.Key_7:
+                   insert( 32 );
+                   break;
+            case Qt.Key_Left:
+                    if( m_selectIndex - 1 >= 0 )
+                    {
+                        --m_selectIndex;
+                    }
+                break;
+            case Qt.Key_Right:
+                    if( m_selectIndex + 1 < m_json.data.length )
+                    {
+                        ++m_selectIndex;
+                    }
+                break;
+            case Qt.Key_Backspace:
+                    f_delete();
+                break;
+            case Qt.Key_Minus:
+                    changeTone("-");
+                break;
+            }
+
+            if( m_json.instrument === "非洲鼓" )
+            {
+                switch( event.key )
+                {
+                case Qt.Key_B:
+                        changeTone("B");
+                    break;
+                case Qt.Key_T:
+                        changeTone("T");
+                    break;
+                case Qt.Key_S:
+                        changeTone("S");
+                    break;
+                }
+            }
+
+            if( m_json.instrument === "钢琴" )
+            {
+                var t_first = m_json.data[m_selectIndex].tone[0];
+                t_first = t_first === "#" || t_first === "b" ? t_first : "";
+
+                switch( event.key )
+                {
+                case Qt.Key_A:
+                        changeTone( "A" + ( m_pitch !== 0 ? "+" + m_pitch : "" ) );
+                    break;
+                case Qt.Key_B:
+                        changeTone( "B" + ( m_pitch !== 0 ? "+" + m_pitch : "" ) );
+                    break;
+                case Qt.Key_C:
+                        changeTone( "C" + ( m_pitch !== 0 ? "+" + m_pitch : "" ) );
+                    break;
+                case Qt.Key_D:
+                        changeTone( "D" + ( m_pitch !== 0 ? "+" + m_pitch : "" ) );
+                    break;
+                case Qt.Key_E:
+                        changeTone( "E" + ( m_pitch !== 0 ? "+" + m_pitch : "" ) );
+                    break;
+                case Qt.Key_F:
+                        changeTone( "F" + ( m_pitch !== 0 ? "+" + m_pitch : "" ) );
+                    break;
+                case Qt.Key_G:
+                        changeTone( "G" + ( m_pitch !== 0 ? "+" + m_pitch : "" ) );
+                    break;
+
+                case Qt.Key_Up:
+
+                        var t_toneSize = m_pianoToneList.length;
+                        var t_toneIndex = getToneIndex();
+                        var t_num =  Math.floor( t_toneIndex / t_toneSize );
+                        var t_tone = Math.abs( t_toneIndex % t_toneSize );
+
+                        if( ++t_tone >= t_toneSize )
+                        {
+                            t_num += Math.floor( t_tone / t_toneSize );
+                            t_tone = t_tone % t_toneSize;
+                        }
+
+
+                        if( t_num <= 3 )
+                        {
+                            changeTone( t_first + m_pianoToneList[ t_tone ] + ( t_num !== 0 ? ( t_num >= 0 ? "+" : "-" ) + Math.abs( t_num ) : "" ) );
+                        }
+
+                    break;
+                case Qt.Key_Down:
+                     t_toneSize = m_pianoToneList.length;
+                     t_toneIndex = getToneIndex();
+                     t_num =  Math.floor( t_toneIndex / t_toneSize );
+                     t_tone = Math.abs( t_toneIndex % t_toneSize );
+
+                    if( --t_tone < 0 )
+                    {
+                        t_num--;
+                        t_tone =  t_tone % t_toneSize + t_toneSize;
+                    }
+
+                    if( t_num >= 0 )
+                    {
+                        changeTone( t_first + m_pianoToneList[ t_tone ] + ( t_num !== 0 ? ( t_num >= 0 ? "+" : "-" ) + Math.abs( t_num ) : "" ) );
+                    }
+                    break;
+
+                case Qt.Key_BracketLeft:
+                    t_tone = pianoTone.text;
+
+                    var t_toneSplit = t_tone.split( "+" );
+
+                    if( t_toneSplit[0].length === 1 )
+                    {
+                        t_tone = "b" + t_tone;
+                    }else{
+                        if( t_toneSplit[0][0] === "#" )
+                        {
+                            t_tone = t_tone.substr( 1 );
+                        }
+                    }
+                    changeTone( t_tone );
+
+                    break;
+                case Qt.Key_BracketRight:
+                    t_tone = pianoTone.text;
+
+                    t_toneSplit = t_tone.split( "+" );
+
+                    if( t_toneSplit[0].length === 1 )
+                    {
+                        t_tone = "#" + t_tone;
+                    }else{
+                        if( t_toneSplit[0][0] === "b" )
+                        {
+                            t_tone = t_tone.substr( 1 );
+                        }
+                    }
+                    changeTone( t_tone );
+
+                    break;
                 }
             }
         }
@@ -1475,6 +1907,46 @@ ApplicationWindow {
                 m_shiftDown = false;
             }else if(event.key === Qt.Key_Control){
                 m_ctrlDown = false;
+            }
+        }
+
+        DropArea{
+            anchors.fill: parent;
+            onDropped: {
+                var t_jsonFile = "";
+                var t_backgroundMusicFile = "";
+                if(drop.hasUrls){
+                    for(var i = 0; i < drop.urls.length; i++){
+
+                        var t_sourcePath = drop.urls[i].replace( "file://", "" );
+                        var t_filePathSprit = t_sourcePath.split( "/" );
+                        var t_fileName = t_filePathSprit[t_filePathSprit.length - 1];
+
+                        var t_fileNameSplit = t_fileName.split( "." );
+                        if( t_fileNameSplit.length === 2 )
+                        {
+                            switch( t_fileNameSplit[1] )
+                            {
+                            case "json":
+                                t_jsonFile = t_sourcePath;
+                                break;
+                            case "wav":
+                                t_backgroundMusicFile = t_sourcePath;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if( t_jsonFile.length > 0 )
+                {
+                    openFile( t_jsonFile );
+                }
+
+                if( t_backgroundMusicFile.length > 0 )
+                {
+                    m_backgroundMusic = t_backgroundMusicFile;
+                }
             }
         }
     }

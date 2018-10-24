@@ -126,6 +126,11 @@ Column {
 
     property var f_delete: function( ){
 
+        if( m_selectIndex < 0 )
+        {
+            return;
+        }
+
         if(m_selectArea.length == 0 ){
             m_selectArea.push(m_selectIndex);
         }
@@ -165,10 +170,7 @@ Column {
         m_selectIndex = min;
         m_selectArea = [];
 
-        if( m_selectIndex >= tones.length )
-        {
-            m_selectIndex = tones.length - 1;
-        }
+        m_selectIndex = min - 1;
     }
 
     property var f_clear: function(){
@@ -229,7 +231,7 @@ Column {
     {
         if( tones.length <= p_index ) return;
         tones[p_index].note = m_data[p_index].note;
-        tones[p_index].tone = m_data[p_index].tone;
+        tones[p_index].tone = typeof( m_data[p_index].tone ) === "string" ? m_data[p_index].tone : JSON.stringify(m_data[p_index].tone);
         tones[p_index].special = m_data[p_index].special;
         tones[p_index].hand = m_data[p_index].hand;
         tones[p_index].m_scale = m_scale;

@@ -5,7 +5,7 @@ Rectangle {
     height: parent.height;
 
     property int m_index: -1;
-    property int note: 1;
+    property real note: 1;
     property real special: 1;
     property string tone: "";
     property string hand: "";
@@ -21,9 +21,8 @@ Rectangle {
     x: m_currBeat * m_unit * m_scale * 8;
 
     Text {
-        text: parent.width < 10 ? "." : tone + ( Math.abs( special - 2.0 / 3.0 ) < 0.001 ? "." : "" );
+        text: parent.width < 10 ? "." : ( tone[0] === "b" || tone[0] === "#" ? tone[1] : tone[0] ) + ( Math.abs( special - 2.0 / 3.0 ) < 0.001 ? "." : "" );
         anchors.verticalCenter: parent.verticalCenter;
-        anchors.horizontalCenter: parent.horizontalCenter;
     }
 
 

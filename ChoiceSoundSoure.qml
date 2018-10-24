@@ -182,7 +182,6 @@ Item {
                     }
                 }
 
-
             }
 
             Item{
@@ -213,45 +212,50 @@ Item {
 
                         Repeater{
                             model: t_soundSource;
-                            Row{
+                            Item {
                                 height: 50;
                                 width: parent.width;
-                                Item{
-                                    height: parent.height;
-                                    width: 40;
-                                    Text {
-                                        text: qsTr(name + ":");
-                                        anchors.verticalCenter: parent.verticalCenter;
-                                    }
-                                }
-                                Item{
-                                    height: parent.height;
-                                    width: 400;
-                                    clip: true;
-                                    Text {
-                                        text: qsTr(path ? path : "--");
-                                        anchors.verticalCenter: parent.verticalCenter;
-                                        x: parent.width - width;
-                                    }
-                                }
-                                Item{
-                                    height: parent.height;
-                                    width: 50;
-                                }
 
-                                Item{
-                                    height: parent.height;
-                                    width: 50;
-                                    Button{
-                                        height: 30;
+                                Row{
+                                    anchors.fill: parent;
+                                    Item{
+                                        height: parent.height;
+                                        width: 40;
+                                        Text {
+                                            text: qsTr(name + ":");
+                                            anchors.verticalCenter: parent.verticalCenter;
+                                        }
+                                    }
+                                    Item{
+                                        height: parent.height;
+                                        width: 400;
+                                        clip: true;
+                                        Text {
+                                            text: qsTr(path ? path : "--");
+                                            anchors.verticalCenter: parent.verticalCenter;
+                                            x: parent.width - width;
+                                        }
+                                    }
+                                    Item{
+                                        height: parent.height;
                                         width: 50;
-                                        anchors.centerIn: parent;
-                                        text: qsTr("更改");
-                                        onClicked: {
-                                            changeSoundSource( name );
+                                    }
+
+                                    Item{
+                                        height: parent.height;
+                                        width: 50;
+                                        Button{
+                                            height: 30;
+                                            width: 50;
+                                            anchors.centerIn: parent;
+                                            text: qsTr("更改");
+                                            onClicked: {
+                                                changeSoundSource( name );
+                                            }
                                         }
                                     }
                                 }
+
                             }
                         }
                     }
